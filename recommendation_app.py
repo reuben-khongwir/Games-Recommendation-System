@@ -15,31 +15,60 @@ data = precomputed_data['data']
 
 # Function to recommend games
 def recommend_hybrid(game_name):
+    # Try to match the game in the content-based system
     matched_game, score, _ = process.extractOne(game_name, content_df['name'])
+    
+    # If the match score is below 90, return None for both game and recommendations
     if score < 90:
         return None, None
+    
     recommendations = {}
 
     # Content-based recommendations (from content_df)
-    if matched_game in content_df['name'].values:
+    if game_name in content_df['name'].values:
         content_index = content_df[content_df['name'] == matched_game].index[0]
-        content_distances, content_indices = content_nbrs.kneighbors(tfidf_matrix[content_index], n_neighbors=12)
         
-        # Collect content-based recommendations
-        for idx, distance in zip(content_indices[0][1:], content_distances[0][1:]):  # Skip the first as it’s the original game
-            game = content_df.iloc[idx]['name']
-            recommendations[game] = recommendations.get(game, 0) + (1 - distance)
-    # Collaborative-based recommendations (from collaborative data)
-    if game in data.index:
-        collab_index = data.index.get_loc(matched_game)
-        collab_similar_items = sorted(list(enumerate(collab_similarity_scores[collab_index])), key=lambda x: x[1], reverse=True)[1:12]
-        
-        # Collect collaborative-based recommendations
-        for idx, similarity in collab_similar_items:
-            game = data.index[idx]
-            recommendations[game] = recommendations.get(game, 0) + similarity
+        # Ensure content_nbrs and tfidf_matrix are available
+        if 'content_nbrs' in globals() and 'tfidf_matrix' in globals():
+            content_distances, content_indices = content_nbrs.kneighbors(tfidf_matrix[content_index], n_neighbors=12)
 
+            # Collect content-based recommendations
+            for idx, distance in zip(content_indices[0][1:], content_distances[0][1:]):  # Skip the first as it’s the original game
+                game = content_df.iloc[idx]['name']
+                recommendations[game] = recommendations.get(game, 0) + (1 - distance)
+        else:
+            # If there are missing data structures, return None
+            return None, None
+    else:
+        # If the game isn't found in content_df, return None for recommendations
+        recommendations = {}
+
+    # Collaborative-based recommendations (from collaborative data)
+    if game_name in data.index:
+        collab_index = data.index.get_loc(matched_game)
+        
+        # Ensure collab_similarity_scores is available
+        if 'collab_similarity_scores' in globals():
+            collab_similar_items = sorted(list(enumerate(collab_similarity_scores[collab_index])), key=lambda x: x[1], reverse=True)[1:12]
+            
+            # Collect collaborative-based recommendations
+            for idx, similarity in collab_similar_items:
+                game = data.index[idx]
+                recommendations[game] = recommendations.get(game, 0) + similarity
+        else:
+            # If collaborative-based data isn't available, return None
+            return None, None
+    else:
+        # If the game isn't found in the collaborative dataset
+        recommendations = {}
+
+    # Sort the recommendations by their score in descending order and return top 12
     ranked_recommendations = sorted(recommendations.items(), key=lambda x: x[1], reverse=True)[:12]
+    
+    # If no recommendations were found, return None
+    if not ranked_recommendations:
+        return None, None
+    
     return matched_game, ranked_recommendations
 
 # Streamlit app
