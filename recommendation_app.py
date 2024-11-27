@@ -44,7 +44,7 @@ def recommend_hybrid(game_name):
         recommendations = {}
 
     # Collaborative-based recommendations (from collaborative data)
-    if game_name in data.index:
+    if matched_game in data.index:
         collab_index = data.index.get_loc(matched_game)
         
         # Ensure collab_similarity_scores is available
