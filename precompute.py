@@ -19,9 +19,9 @@ def combine_features(row):
             str(row['short_description']) + " " +
             str(row['publishers']) + " " +
             str(row['categories']) + " " +
-            str(row['genres']) + " " +
+            str(row['genres'])*2 + " " +
             str(row['developers']) + " " +
-            str(row['tags']))
+            str(row['tags'])*2)
 
 content_df['combined_features'] = content_df.apply(combine_features, axis=1)
 
